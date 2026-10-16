@@ -1,0 +1,6 @@
+{
+  "name": "DFU Insight — Explainable Medical AI",
+  "description": "An explainable AI research platform for diabetic foot ulcer pathology classification and Wagner severity grading with dual-branch deep learning and interactive explainability.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

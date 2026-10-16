@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --bg-primary: #100904;
+    --bg-secondary: #181411;
+    --surface-elevated: #241C15;
+    --text-primary: #FFEDD7;
+    --text-secondary: #B7AA98;
+    --text-muted: #817568;
+    --border-subtle: #40372E;
+    --accent-orange: #DC5000;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #100904;
+    color: #FFEDD7;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .duration-1500 {
+    transition-duration: 1500ms;
+  }
+}
+
+/* Tabular numerals for medical & scientific metrics */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Oryzo-inspired editorial line heights and tight tracking */
+.tracking-display {
+  letter-spacing: -0.035em;
+}
+
+.leading-display {
+  line-height: 0.98;
+}
+
+/* Dark-room warm scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #100904;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #241C15;
+  border-radius: 3px;
+  border: 1px solid #40372E;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #40372E;
+}
