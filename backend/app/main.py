@@ -1,6 +1,6 @@
 import uuid
 import logging
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -13,24 +13,28 @@ from backend.app.schemas.dfu_schemas import (
 )
 from backend.app.services.inference import inference_service, PATHOLOGY_CLASSES
 from backend.app.services.xai import compute_gradcam, compute_integrated_gradients
+from backend.app.routers.auth import router as auth_router
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("dfu_insight")
 
 app = FastAPI(
     title="DFU Insight Medical AI API",
-    description="Explainable AI API for Diabetic Foot Ulcer Pathology Classification and Wagner Grading",
+    description="Explainable AI API for Diabetic Foot Ulcer Pathology Classification, Wagner Grading, and Clinical Authentication",
     version="3.2.0",
 )
 
-# Safe CORS configuration
+# Safe CORS configuration allowing local dev and production frontends (Vercel, Render)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount authentication router
+app.include_router(auth_router)
 
 MAX_UPLOAD_SIZE = 15 * 1024 * 1024  # 15 MB
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png"}
@@ -114,13 +118,11 @@ async def explain_prediction(request: ExplainRequest):
     if request.target_class and request.target_class in PATHOLOGY_CLASSES:
         target_idx = PATHOLOGY_CLASSES.index(request.target_class)
 
-    dummy_tensor = torch.randn(1, 3, 384, 384, device=inference_service.device)
-
     try:
         if method == "gradcam":
-            result = compute_gradcam(inference_service.model, dummy_tensor, target_idx)
+            result = compute_gradcam(inference_service.model, None, target_idx)
         else:
-            result = compute_integrated_gradients(inference_service.model, dummy_tensor, target_idx)
+            result = compute_integrated_gradients(inference_service.model, None, target_idx)
 
         return ExplainResponse(
             request_id=request.request_id,
