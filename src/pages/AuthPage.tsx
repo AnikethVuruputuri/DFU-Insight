@@ -153,10 +153,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
     };
 
     // Load Phone.Email external script
-    const existingScript = document.querySelector('script[src*="phone.email/sign-in-button"]');
+    const existingScript = document.querySelector('script[src*="phone.email"]');
     if (!existingScript) {
       const script = document.createElement('script');
-      script.src = 'https://www.phone.email/sign-in-button.js';
+      script.src = 'https://www.phone.email/sign_in_button_v1.js';
       script.async = true;
       document.body.appendChild(script);
     }
@@ -761,7 +761,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                     <div className="flex justify-center py-1">
                       <div
                         className="pe_signin_button"
-                        data-client-id={import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || '17638498889498883498'}
+                        data-client-id={import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || '11116873251248904188'}
                       />
                     </div>
                   </div>
