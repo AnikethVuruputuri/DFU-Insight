@@ -14,8 +14,6 @@ import {
   AlertCircle,
   RefreshCw,
   KeyRound,
-  Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -76,7 +74,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
   // OTP state
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [resendCountdown, setResendCountdown] = useState(60);
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
   const [registrationToken, setRegistrationToken] = useState('');
 
   // Role state
@@ -205,7 +202,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
     };
   }, [handlePhoneEmailSuccess]);
 
-  // Open Phone.Email popup to send REAL SMS to the user's phone
+  // Open real OTP delivery dialog
   const openPhoneEmailRealSms = () => {
     setIsLoading(true);
     setErrorMessage('');
@@ -231,17 +228,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
 
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
       setErrorMessage(
-        'Popup window was blocked by your browser. Please allow popups for this site, or use the direct Phone.Email button below.'
+        'Popup window was blocked by your browser. Please allow popups or use the verification button below.'
       );
       setIsLoading(false);
     } else {
-      setSuccessNotice('Opened Phone.Email SMS delivery window. Enter your number to receive the real SMS OTP on your phone.');
+      setSuccessNotice('OTP window opened. Enter the verification code sent to your mobile device.');
       setIsLoading(false);
     }
   };
 
-  // Demo / Dev Mode OTP (in-memory simulator)
-  const handleSendDevOtp = async (e?: React.FormEvent) => {
+  // Submit phone number to send real SMS OTP
+  const handleSendOtp = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMessage('');
     setSuccessNotice('');
@@ -252,52 +249,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${apiUrl}/api/v1/auth/send-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: cleanPhone,
-          country_code: countryCode,
-          purpose: mode === 'signup' ? 'register' : 'login',
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMessage(data.detail || 'Could not send OTP. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (!data.success) {
-        setErrorMessage(data.message);
-        if (data.is_registered === false && mode === 'login') {
-          setErrorMessage('This number is not registered yet. Please switch to Sign Up.');
-        } else if (data.is_registered === true && mode === 'signup') {
-          setErrorMessage('This number is already registered. Please switch to Sign In.');
-        }
-        setIsLoading(false);
-        return;
-      }
-
-      setFormattedPhone(data.phone);
-      if (data.dev_otp) {
-        setDevOtpHint(data.dev_otp);
-      }
-      setResendCountdown(60);
-      setOtpDigits(['', '', '', '', '', '']);
-      setStep('otp');
-      setSuccessNotice(`Test verification code generated for ${data.phone}`);
-
-      setTimeout(() => otpInputRefs.current[0]?.focus(), 150);
-    } catch {
-      setErrorMessage('Network connection error. Is the backend server running?');
-    } finally {
-      setIsLoading(false);
-    }
+    setFormattedPhone(`+${countryCode} ${cleanPhone}`);
+    openPhoneEmailRealSms();
   };
 
   // Handle OTP digit box typing
@@ -603,7 +556,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
           {/* Bottom Security Notice */}
           <div className="relative z-10 pt-6 border-t border-[#40372E]/50 text-xs font-light text-[#817568] text-left flex items-center justify-between">
             <span>© {new Date().getFullYear()} DFU Insight</span>
-            <span className="font-mono text-[11px]">Free Carrier SMS OTP</span>
+            <span className="font-mono text-[11px]">Secure Mobile OTP</span>
           </div>
         </div>
 
@@ -666,36 +619,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
               </motion.div>
             )}
 
-            {/* Dev Mode Banner (for instant demo verification) */}
-            {devOtpHint && step === 'otp' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="p-3 bg-[#DC5000]/10 border border-[#DC5000]/40 rounded-lg flex items-center justify-between text-xs text-left"
-              >
-                <div className="flex items-center gap-2 text-[#FFEDD7]">
-                  <Sparkles className="w-4 h-4 text-[#DC5000]" />
-                  <span>
-                    <strong>Instant Demo Code:</strong>{' '}
-                    <span className="font-mono tracking-widest text-[#DC5000] font-bold text-sm">
-                      {devOtpHint}
-                    </span>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const digits = devOtpHint.split('').slice(0, 6);
-                    setOtpDigits(digits);
-                    executeVerifyOtp(devOtpHint);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-mono bg-[#DC5000] text-white rounded hover:bg-[#b84300] transition-colors"
-                >
-                  Auto Fill & Verify
-                </button>
-              </motion.div>
-            )}
-
             <AnimatePresence mode="wait">
               {/* ========================================================= */}
               {/* STEP 1: MOBILE NUMBER ENTRY */}
@@ -755,57 +678,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                     </button>
                   </div>
 
-                  {/* ========================================================= */}
-                  {/* PRIMARY OPTION: REAL SMS OTP TO DEVICE (Phone.Email) */}
-                  {/* ========================================================= */}
-                  <div className="p-5 bg-gradient-to-b from-[#181411] to-[#120d09] border border-[#047857]/40 rounded-xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-emerald-400">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>Real Carrier SMS (Free 1,000/mo)</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-[#817568]">Powered by Phone.Email</span>
-                    </div>
-
-                    <p className="text-xs text-[#B7AA98] leading-relaxed">
-                      Click below to open the secure SMS delivery window. An authentic 6-digit OTP will be dispatched directly to your mobile device via SMS.
-                    </p>
-
-                    <button
-                      type="button"
-                      onClick={openPhoneEmailRealSms}
-                      disabled={isLoading}
-                      className="w-full py-4 px-6 text-sm font-medium tracking-wide text-white bg-[#024430] hover:bg-[#035a40] active:scale-[0.99] rounded-lg transition-all flex items-center justify-center gap-3 shadow-lg shadow-emerald-950/40 border border-emerald-600/30 cursor-pointer"
-                    >
-                      <Phone className="w-4 h-4 text-emerald-400" />
-                      <span>Send Real SMS OTP to My Device</span>
-                      <ExternalLink className="w-4 h-4 text-emerald-400/80" />
-                    </button>
-
-                    {/* Official Phone.Email Button Widget container */}
-                    <div className="flex justify-center pt-1">
-                      <div
-                        className="pe_signin_button"
-                        data-client-id={import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || PHONE_EMAIL_CLIENT_ID}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="relative flex items-center justify-center pt-2">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-[#40372E]/50" />
-                    </div>
-                    <span className="relative px-3 bg-[#100904] text-[11px] font-mono text-[#817568] uppercase">
-                      Or Test Locally (Instant Demo Code)
-                    </span>
-                  </div>
-
-                  {/* Mobile Number Form (for Instant Dev / Demo Verification) */}
-                  <form onSubmit={handleSendDevOtp} className="space-y-4">
+                  {/* Mobile Number Form */}
+                  <form onSubmit={handleSendOtp} className="space-y-4">
                     <div className="space-y-1.5">
                       <label className="block text-xs font-mono text-[#B7AA98] uppercase tracking-wider">
-                        Enter Mobile Number to Simulate
+                        Mobile Number
                       </label>
                       <div className="flex gap-2">
                         {/* Country code selector */}
@@ -840,35 +717,37 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        type="submit"
-                        disabled={isLoading || !phoneNumber.trim()}
-                        className="flex-1 py-3 px-4 text-xs font-medium tracking-wider uppercase text-white bg-[#DC5000] hover:bg-[#b84300] active:scale-[0.99] rounded transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none"
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            <span>Generating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Simulate Instant Code</span>
-                            <ArrowRight className="w-4 h-4" />
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={openPhoneEmailRealSms}
-                        className="px-4 py-3 text-xs font-mono text-emerald-400 bg-emerald-950/30 hover:bg-emerald-950/50 border border-emerald-500/30 rounded transition-all shrink-0"
-                        title="Send Real SMS via Phone.Email"
-                      >
-                        Send Real SMS →
-                      </button>
-                    </div>
+                    <button
+                      type="submit"
+                      disabled={isLoading || !phoneNumber.trim()}
+                      className="w-full py-3.5 px-6 text-xs font-medium tracking-wider uppercase text-white bg-[#DC5000] hover:bg-[#b84300] active:scale-[0.99] rounded transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:pointer-events-none cursor-pointer shadow-sm"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Sending OTP...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Send OTP</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
                   </form>
+
+                  {/* Clean Verification Notice & Integrated Widget */}
+                  <div className="pt-2 flex flex-col items-center gap-3">
+                    <div className="flex items-center gap-2 text-xs text-[#817568]">
+                      <Shield className="w-3.5 h-3.5 text-[#DC5000]" />
+                      <span>Single-use OTP code delivered to your device via SMS</span>
+                    </div>
+
+                    <div
+                      className="pe_signin_button"
+                      data-client-id={import.meta.env.VITE_PHONE_EMAIL_CLIENT_ID || PHONE_EMAIL_CLIENT_ID}
+                    />
+                  </div>
                 </motion.div>
               )}
 
@@ -886,10 +765,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                 >
                   <div className="space-y-2">
                     <h1 className="text-3xl sm:text-4xl font-normal text-[#FFEDD7] tracking-display">
-                      Enter Verification Code
+                      Enter OTP
                     </h1>
                     <p className="text-xs sm:text-sm text-[#B7AA98] font-light leading-relaxed">
-                      Verification code for{' '}
+                      Enter the 6-digit OTP sent to{' '}
                       <span className="font-mono text-[#FFEDD7]">{formattedPhone}</span>.{' '}
                       <button
                         type="button"
@@ -926,15 +805,18 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                     <div className="flex items-center justify-between text-xs font-mono text-[#817568] pt-2">
                       <span>
                         {resendCountdown > 0 ? (
-                          <>Resend code in {resendCountdown}s</>
+                          <>Resend OTP in {resendCountdown}s</>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleSendDevOtp()}
+                            onClick={() => {
+                              setResendCountdown(60);
+                              openPhoneEmailRealSms();
+                            }}
                             className="text-[#DC5000] hover:text-[#b84300] flex items-center gap-1.5 transition-colors"
                           >
                             <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Resend Code</span>
+                            <span>Resend OTP</span>
                           </button>
                         )}
                       </span>
@@ -952,23 +834,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ onBackToHome, onSuccess }) =
                       {isLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Verifying Security Code...</span>
+                          <span>Verifying OTP...</span>
                         </>
                       ) : (
                         <>
                           <KeyRound className="w-4 h-4" />
-                          <span>Verify & Continue</span>
+                          <span>Verify OTP</span>
                         </>
                       )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={openPhoneEmailRealSms}
-                      className="w-full py-2.5 px-4 text-xs font-mono text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/30 rounded transition-all flex items-center justify-center gap-2"
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Didn&apos;t get SMS? Verify via Phone.Email</span>
                     </button>
                   </div>
                 </motion.div>
