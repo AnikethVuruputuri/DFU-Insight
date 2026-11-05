@@ -19,6 +19,7 @@ import {
   Sparkles,
   ExternalLink,
   Plus,
+  Loader2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -31,7 +32,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigateAnalyze,
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'records' | 'guidelines'>('overview');
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="w-full flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-3 text-[#B7AA98]">
+        <Loader2 className="w-6 h-6 animate-spin text-[#DC5000]" />
+        <span className="text-xs font-mono tracking-wider uppercase">Loading clinical dashboard...</span>
+      </div>
+    );
+  }
 
   const roleConfig = {
     patient: {

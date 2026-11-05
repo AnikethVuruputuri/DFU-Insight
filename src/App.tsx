@@ -16,7 +16,16 @@ type ViewType = 'home' | 'analyze' | 'auth' | 'dashboard';
 
 function AppContent() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [currentView, setCurrentView] = useState<ViewType>('home');
+  const [currentView, setCurrentView] = useState<ViewType>(() => {
+    // If returning from Phone.Email verification redirect, open auth page to process and route to dashboard
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('user_json_url')) {
+        return 'auth';
+      }
+    }
+    return 'home';
+  });
 
   // If user is authenticated and navigating to auth, send to their dashboard
   useEffect(() => {

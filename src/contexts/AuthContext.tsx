@@ -39,7 +39,14 @@ export const getApiBaseUrl = (): string => {
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem('dfu_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('dfu_token'));
   const [isLoading, setIsLoading] = useState(true);
 
